@@ -1,0 +1,5 @@
+{
+  "name": "AutoPlanning",
+  "description": "Une application de gestion de planning minimaliste pour auto-école avec intégration Twilio.",
+  "requestFramePermissions": []
+}
