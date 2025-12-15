@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { StorageService } from '../services/storage';
+import { GoogleCalendarService } from '../services/googleCalendar';
 import { Users, Calendar, UserCheck } from 'lucide-react';
 import { Lesson, Student, Instructor } from '../types';
+import { startOfWeek, addDays } from 'date-fns';
 
 export const DashboardPage: React.FC = () => {
     const [stats, setStats] = useState({
@@ -12,40 +14,70 @@ export const DashboardPage: React.FC = () => {
     const [nextLessons, setNextLessons] = useState<(Lesson & { studentName: string, instructorName: string, color: string })[]>([]);
 
     useEffect(() => {
-        const students = StorageService.getStudents();
-        const instructors = StorageService.getInstructors();
-        const lessons = StorageService.getLessons();
+        const loadDashboardData = async () => {
+            const students = StorageService.getStudents();
+            const instructors = StorageService.getInstructors();
 
-        // Calc stats
-        const now = new Date();
-        const nextWeek = new Date(now);
-        nextWeek.setDate(now.getDate() + 7);
+            // Charger les cours depuis Google Calendar pour la semaine à venir
+            const now = new Date();
+            const start = startOfWeek(now, { weekStartsOn: 1 });
+            const end = addDays(start, 7);
+            
+            try {
+                const events = await GoogleCalendarService.listRange(start.toISOString(), end.toISOString());
+                
+                // Convertir les events Google Calendar en Lesson
+                const lessons: Lesson[] = events.map(event => {
+                    const props = event.extendedProperties?.private || {};
+                    return {
+                        id: event.id || '',
+                        studentId: props.studentId || '',
+                        instructorId: props.instructorId || '',
+                        start: event.start?.dateTime || event.start?.date || '',
+                        end: event.end?.dateTime || event.end?.date || '',
+                        confirmed: props.confirmed === 'true'
+                    };
+                });
 
-        const thisWeekLessons = lessons.filter(l => {
-            const d = new Date(l.start);
-            return d >= now && d <= nextWeek;
-        });
+                // Filtrer les cours de la semaine à venir
+                const thisWeekLessons = lessons.filter(l => {
+                    const d = new Date(l.start);
+                    return d >= now && d <= end;
+                });
 
-        // Get details for next 5 lessons
-        const sortedNext = thisWeekLessons.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).slice(0, 5);
-        
-        const enrichedLessons = sortedNext.map(l => {
-            const s = students.find(st => st.id === l.studentId);
-            const i = instructors.find(inStr => inStr.id === l.instructorId);
-            return {
-                ...l,
-                studentName: s ? `${s.firstName} ${s.lastName}` : 'Inconnu',
-                instructorName: i ? `${i.firstName} ${i.lastName}` : 'Inconnu',
-                color: i ? i.color : '#ccc'
-            };
-        });
+                // Get details for next 5 lessons
+                const sortedNext = thisWeekLessons.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).slice(0, 5);
+                
+                const enrichedLessons = sortedNext.map(l => {
+                    const s = students.find(st => st.id === l.studentId);
+                    const i = instructors.find(inStr => inStr.id === l.instructorId);
+                    return {
+                        ...l,
+                        studentName: s ? `${s.firstName} ${s.lastName}` : 'Inconnu',
+                        instructorName: i ? `${i.firstName} ${i.lastName}` : 'Inconnu',
+                        color: i ? i.color : '#ccc'
+                    };
+                });
 
-        setStats({
-            students: students.length,
-            instructors: instructors.length,
-            lessonsThisWeek: thisWeekLessons.length
-        });
-        setNextLessons(enrichedLessons);
+                setStats({
+                    students: students.length,
+                    instructors: instructors.length,
+                    lessonsThisWeek: thisWeekLessons.length
+                });
+                setNextLessons(enrichedLessons);
+            } catch (error) {
+                console.error('Erreur lors du chargement des cours depuis Google Calendar:', error);
+                // En cas d'erreur, on affiche juste les stats sans cours
+                setStats({
+                    students: students.length,
+                    instructors: instructors.length,
+                    lessonsThisWeek: 0
+                });
+                setNextLessons([]);
+            }
+        };
+
+        loadDashboardData();
     }, []);
 
     return (

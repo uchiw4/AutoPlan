@@ -43,6 +43,10 @@ VITE_TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 VITE_TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 VITE_TWILIO_PHONE_NUMBER=+1xxxxxxxxxx   # ou numéro WhatsApp activé
 VITE_TWILIO_API_URL=http://localhost:4000/api/twilio/send-message
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:4000/auth/google/callback
+GOOGLE_CALENDAR_ID=primary   # ou l’ID d’un agenda partagé
 ```
 Sinon, remplis directement ces champs dans l’écran “Paramètres” de l’application.
 
@@ -58,6 +62,10 @@ Lance l’app sur http://localhost:3000.
 npm run twilio-server
 ```
 Expose `POST /api/twilio/send-message` sur http://localhost:4000.
+
+### Auth Google (dev)
+- Visite http://localhost:4000/auth/google pour autoriser l’appli (scope calendar.events).  
+- Le token est gardé en mémoire (dev). En prod il faut persister et sécuriser (DB/coffre).
 
 ## Utilisation (notification)
 1. Dans l’app, onglet Paramètres :
