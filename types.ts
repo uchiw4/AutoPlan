@@ -7,12 +7,6 @@ export interface Instructor {
   color: string;
 }
 
-export interface StudentAvailability {
-  day: number; // 0 = dimanche, 1 = lundi, ..., 6 = samedi
-  startHour: number; // Heure de début (0-23)
-  endHour: number; // Heure de fin (0-23)
-}
-
 export interface Student {
   id: string;
   firstName: string;
@@ -20,7 +14,6 @@ export interface Student {
   email: string;
   phone: string;
   notes?: string;
-  availability?: StudentAvailability[]; // Disponibilités sur la semaine
 }
 
 export interface Lesson {

@@ -1,10 +1,27 @@
 import { Lesson } from '../types';
 
-// Endpoint backend pour Google Calendar (proxy Node)
-const BACKEND_URL =
-  (import.meta as any).env?.VITE_TWILIO_API_URL?.replace('/twilio/send-message', '') ||
-  'http://localhost:4000/api';
-const GOOGLE_EVENTS_URL = `${BACKEND_URL}/google/events`;
+// Endpoint backend pour Google Calendar
+// En production Vercel, utilise automatiquement /api/google/events
+// En dev local, utilise le serveur Express sur http://localhost:4000/api
+const getBackendUrl = () => {
+  // Si VITE_BACKEND_URL est défini, l'utiliser
+  if ((import.meta as any).env?.VITE_BACKEND_URL) {
+    return (import.meta as any).env.VITE_BACKEND_URL;
+  }
+  
+  // En développement local (localhost), utiliser le serveur Express
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:4000/api';
+  }
+  
+  // En production Vercel, utiliser les routes relatives
+  return '';
+};
+
+const BACKEND_URL = getBackendUrl();
+const GOOGLE_EVENTS_URL = BACKEND_URL 
+  ? `${BACKEND_URL}/google/events`
+  : '/api/google/events';
 
 export const GoogleCalendarService = {
   async listRange(timeMin: string, timeMax: string): Promise<any[]> {

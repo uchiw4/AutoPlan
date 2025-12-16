@@ -252,8 +252,34 @@ app.delete('/api/google/events/:id', async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {
+      twilio: {
+        configured: !!(accountSid && authToken),
+        ready: !!(accountSid && authToken && TWILIO_MESSAGES_URL),
+      },
+      google: {
+        oauthConfigured: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+        authenticated: !!googleTokens,
+        calendarId: GOOGLE_CALENDAR_ID || null,
+      },
+    },
+  };
+
+  // Si tout est OK, retourner 200, sinon 503 (Service Unavailable)
+  const allGood = health.services.twilio.configured && health.services.google.oauthConfigured;
+  const statusCode = allGood ? 200 : 503;
+
+  return res.status(statusCode).json(health);
+});
+
 app.listen(port, () => {
   console.log(`Twilio proxy server listening on http://localhost:${port}`);
+  console.log(`Health check available at http://localhost:${port}/health`);
 });
 
 

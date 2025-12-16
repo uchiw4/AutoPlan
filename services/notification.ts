@@ -1,9 +1,24 @@
 import { Lesson, Student, Instructor, AppSettings } from '../types';
 
 // Endpoint backend qui enverra réellement le SMS via Twilio.
-// Tu peux le surcharger avec VITE_TWILIO_API_URL dans un .env.local si besoin.
-const TWILIO_API_URL =
-  (import.meta as any).env?.VITE_TWILIO_API_URL || 'http://localhost:4000/api/twilio/send-message';
+// En production Vercel, utilise automatiquement /api/twilio/send-message
+// En dev local, utilise le serveur Express sur http://localhost:4000/api
+const getTwilioApiUrl = () => {
+  // Si VITE_TWILIO_API_URL est défini, l'utiliser
+  if ((import.meta as any).env?.VITE_TWILIO_API_URL) {
+    return (import.meta as any).env.VITE_TWILIO_API_URL;
+  }
+  
+  // En développement local (localhost), utiliser le serveur Express
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:4000/api/twilio/send-message';
+  }
+  
+  // En production Vercel, utiliser les routes relatives
+  return '/api/twilio/send-message';
+};
+
+const TWILIO_API_URL = getTwilioApiUrl();
 
 export const NotificationService = {
   sendConfirmation: async (

@@ -1,70 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Student, StudentAvailability } from '../types';
+import { Student } from '../types';
 import { StorageService } from '../services/storage';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Plus, Trash2, Phone, Search, Pencil, Clock } from 'lucide-react';
+import { Plus, Trash2, Phone, Search, Pencil } from 'lucide-react';
 
 export const StudentsPage: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form State
   const [formData, setFormData] = useState<Partial<Student>>({});
-  const [availabilities, setAvailabilities] = useState<StudentAvailability[]>([]);
-  
-  const DAYS = [
-    { value: 1, label: 'Lundi' },
-    { value: 2, label: 'Mardi' },
-    { value: 3, label: 'Mercredi' },
-    { value: 4, label: 'Jeudi' },
-    { value: 5, label: 'Vendredi' },
-    { value: 6, label: 'Samedi' },
-    { value: 0, label: 'Dimanche' },
-  ];
 
   useEffect(() => {
     setStudents(StorageService.getStudents());
   }, []);
 
-  const formatPhoneNumber = (phone: string): string => {
-    if (!phone) return '+33';
-    // Enlever tous les espaces et caractères non numériques sauf +
-    const cleaned = phone.replace(/[^\d+]/g, '');
-    
-    // Si ça commence déjà par +33, on garde tel quel
-    if (cleaned.startsWith('+33')) {
-      return cleaned;
-    }
-    
-    // Si ça commence par 0, on remplace par +33
-    if (cleaned.startsWith('0')) {
-      return '+33' + cleaned.substring(1);
-    }
-    
-    // Si ça commence par 33, on ajoute le +
-    if (cleaned.startsWith('33')) {
-      return '+' + cleaned;
-    }
-    
-    // Sinon, on force +33 au début
-    return '+33' + cleaned.replace(/^\+/, '');
-  };
-
-  const handlePhoneChange = (value: string) => {
-    const formatted = formatPhoneNumber(value);
-    setFormData({...formData, phone: formatted});
-  };
-
   const handleSave = () => {
     if (!formData.firstName || !formData.lastName) return;
-
-    // Formater le numéro de téléphone avant sauvegarde
-    const formattedPhone = formData.phone ? formatPhoneNumber(formData.phone) : '+33';
 
     if (editingStudent) {
       const updated: Student[] = students.map(s =>
@@ -74,9 +29,8 @@ export const StudentsPage: React.FC = () => {
               firstName: formData.firstName!,
               lastName: formData.lastName!,
               email: formData.email || '',
-              phone: formattedPhone,
+              phone: formData.phone || '',
               notes: formData.notes || '',
-              availability: availabilities.length > 0 ? availabilities : undefined,
             }
           : s
       );
@@ -88,9 +42,8 @@ export const StudentsPage: React.FC = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email || '',
-        phone: formattedPhone,
-        notes: formData.notes || '',
-        availability: availabilities.length > 0 ? availabilities : undefined,
+        phone: formData.phone || '',
+        notes: formData.notes || ''
       };
       const updated = [...students, newStudent];
       setStudents(updated);
@@ -100,7 +53,6 @@ export const StudentsPage: React.FC = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
     setFormData({});
-    setAvailabilities([]);
   };
 
   const handleDelete = (id: string) => {
@@ -123,7 +75,7 @@ export const StudentsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Élèves</h1>
           <p className="text-gray-500 mt-1">Gérez vos inscrits et leurs moniteurs référents.</p>
         </div>
-        <Button onClick={() => { setEditingStudent(null); setFormData({}); setAvailabilities([]); setIsModalOpen(true); }}>
+        <Button onClick={() => { setEditingStudent(null); setFormData({}); setIsModalOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
           Nouvel Élève
         </Button>
@@ -175,16 +127,6 @@ export const StudentsPage: React.FC = () => {
                   <div className="flex justify-end gap-3">
                     <button
                       onClick={() => {
-                        setViewingStudent(student);
-                        setIsAvailabilityModalOpen(true);
-                      }}
-                      className="text-blue-600 hover:text-blue-900"
-                      title="Voir les disponibilités"
-                    >
-                      <Clock size={16} />
-                    </button>
-                    <button
-                      onClick={() => {
                         setEditingStudent(student);
                         setFormData({
                           firstName: student.firstName,
@@ -193,7 +135,6 @@ export const StudentsPage: React.FC = () => {
                           phone: student.phone,
                           notes: student.notes || '',
                         });
-                        setAvailabilities(student.availability || []);
                         setIsModalOpen(true);
                       }}
                       className="text-slate-600 hover:text-slate-900"
@@ -219,7 +160,7 @@ export const StudentsPage: React.FC = () => {
 
       <Modal 
         isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); setEditingStudent(null); setFormData({}); setAvailabilities([]); }} 
+        onClose={() => { setIsModalOpen(false); setEditingStudent(null); setFormData({}); }} 
         title={editingStudent ? "Modifier un élève" : "Ajouter un élève"}
       >
         <div className="space-y-4">
@@ -257,11 +198,9 @@ export const StudentsPage: React.FC = () => {
             <input 
               type="tel" 
               className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none placeholder-gray-400"
-              placeholder="+33..."
               value={formData.phone || ''}
-              onChange={e => handlePhoneChange(e.target.value)}
+              onChange={e => setFormData({...formData, phone: e.target.value})}
             />
-            <p className="text-xs text-gray-500 mt-1">Le numéro doit commencer par +33</p>
           </div>
           <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Remarques</label>
@@ -273,138 +212,9 @@ export const StudentsPage: React.FC = () => {
               />
           </div>
 
-          {/* Disponibilités */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <Clock className="mr-2 h-4 w-4" />
-              Disponibilités sur la semaine
-            </label>
-            <div className="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
-              {availabilities.map((avail, index) => (
-                <div key={index} className="flex items-center gap-3 bg-white p-3 rounded-md border border-gray-200">
-                  <select
-                    className="flex-1 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none text-sm"
-                    value={avail.day}
-                    onChange={(e) => {
-                      const updated = [...availabilities];
-                      updated[index] = { ...updated[index], day: parseInt(e.target.value) };
-                      setAvailabilities(updated);
-                    }}
-                  >
-                    {DAYS.map(day => (
-                      <option key={day.value} value={day.value}>{day.label}</option>
-                    ))}
-                  </select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">De</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="23"
-                      className="w-16 px-2 py-1 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none text-sm"
-                      value={avail.startHour}
-                      onChange={(e) => {
-                        const updated = [...availabilities];
-                        updated[index] = { ...updated[index], startHour: parseInt(e.target.value) || 0 };
-                        setAvailabilities(updated);
-                      }}
-                    />
-                    <span className="text-sm text-gray-600">h à</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="23"
-                      className="w-16 px-2 py-1 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none text-sm"
-                      value={avail.endHour}
-                      onChange={(e) => {
-                        const updated = [...availabilities];
-                        updated[index] = { ...updated[index], endHour: parseInt(e.target.value) || 0 };
-                        setAvailabilities(updated);
-                      }}
-                    />
-                    <span className="text-sm text-gray-600">h</span>
-                    <button
-                      onClick={() => {
-                        const updated = availabilities.filter((_, i) => i !== index);
-                        setAvailabilities(updated);
-                      }}
-                      className="text-red-500 hover:text-red-700 ml-2"
-                      type="button"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setAvailabilities([...availabilities, { day: 1, startHour: 9, endHour: 18 }]);
-                }}
-                className="w-full"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Ajouter une disponibilité
-              </Button>
-              {availabilities.length === 0 && (
-                <p className="text-xs text-gray-500 text-center italic">Aucune disponibilité définie</p>
-              )}
-            </div>
-          </div>
-
           <div className="pt-4 flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Annuler</Button>
             <Button onClick={handleSave}>Enregistrer</Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal pour afficher les disponibilités */}
-      <Modal 
-        isOpen={isAvailabilityModalOpen} 
-        onClose={() => { setIsAvailabilityModalOpen(false); setViewingStudent(null); }} 
-        title={viewingStudent ? `Disponibilités de ${viewingStudent.firstName} ${viewingStudent.lastName}` : "Disponibilités"}
-      >
-        <div className="space-y-4">
-          {viewingStudent && viewingStudent.availability && viewingStudent.availability.length > 0 ? (
-            <div className="space-y-3">
-              {viewingStudent.availability.map((avail, index) => {
-                const dayLabel = DAYS.find(d => d.value === avail.day)?.label || 'Jour inconnu';
-                return (
-                  <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-sm">
-                          {dayLabel.substring(0, 2)}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-gray-900">{dayLabel}</div>
-                          <div className="text-sm text-gray-600">
-                            De {avail.startHour.toString().padStart(2, '0')}h à {avail.endHour.toString().padStart(2, '0')}h
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm font-medium text-blue-700">
-                        {avail.endHour - avail.startHour}h
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500 font-medium">Aucune disponibilité définie</p>
-              <p className="text-sm text-gray-400 mt-2">Les disponibilités peuvent être ajoutées lors de la modification de l'élève.</p>
-            </div>
-          )}
-          
-          <div className="pt-4 flex justify-end">
-            <Button variant="secondary" onClick={() => { setIsAvailabilityModalOpen(false); setViewingStudent(null); }}>
-              Fermer
-            </Button>
           </div>
         </div>
       </Modal>
